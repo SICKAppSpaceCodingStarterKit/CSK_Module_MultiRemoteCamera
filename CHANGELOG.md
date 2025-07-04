@@ -1,6 +1,22 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## Release 6.2.0
+
+### New features
+- Support SEC100 camera
+
+### Improvements
+- Better instance handling regarding FlowConfig
+- Increased timer to wait for camera bootUp to 20 seconds (was 12 before)
+
+### Bugfix
+- SW trigger binding did not work for multiple instances
+- Did not check properly for existing APIs
+- Legacy bindings of ValueDisplay elements and FileUpload feature within UI did not work if deployed with VS Code AppSpace SDK
+- UI differs if deployed via Appstudio or VS Code AppSpace SDK
+- Fullscreen icon of iFrame was visible
+
 ## Release 6.1.1
 
 ### Bugfix

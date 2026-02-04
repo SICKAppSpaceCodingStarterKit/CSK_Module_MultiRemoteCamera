@@ -36,7 +36,7 @@ for i = 1, 10 do
   table.insert(multiRemoteCamera.swTriggerFunctions, triggerCamera)
 end
 
-if _G.availableAPIs.imageProvider then
+if _G.availableAPIs.ethernet then
   multiRemoteCamera.interfaces = Ethernet.Interface.getInterfaces()
   table.insert(multiRemoteCamera.interfaces, 'Localhost')
 end
@@ -96,7 +96,11 @@ function multiRemoteCamera.create(cameraNo)
   self.gigEVisionConfigUITable = nil -- Content of custom GigEVision setting for UI table
 
   self.customCameraActive = false -- TRUE if camera model == 'CUSTOM'
-  self.cameraParameters = 'Others' -- Type of camera parameters to show in UI
+  if _G.availableAPIs.imageProvider and (_G.availableAPIs.I2D or _G.availableAPIs.GigEVision) then
+    self.cameraParameters = 'Others' -- Type of camera parameters to show in styleForUI
+  elseif  _G.availableAPIs.SEC100 then
+    self.cameraParameters = 'SEC100'
+  end
 
   self.triggerFunction = nil -- Internally used function to SW trigger the camera
 
@@ -132,6 +136,8 @@ function multiRemoteCamera.create(cameraNo)
   self.imageProcessingParams:add('secUserPassword', self.parameters.secUserPassword, "STRING")
   self.imageProcessingParams:add('secMode', self.parameters.secMode, "STRING")
   self.imageProcessingParams:add('secWebSocketClientInstance', self.parameters.secWebSocketClientInstance, "INT")
+  self.imageProcessingParams:add('secSnapshotDelay', self.parameters.secSnapshotDelay, "INT")
+  self.imageProcessingParams:add('secInternalImageProcessing', self.parameters.secInternalImageProcessing, "BOOL")
 
   return self
 end
@@ -233,6 +239,8 @@ function multiRemoteCamera:connectCamera()
     else
       _G.logger:warning(nameOfModule .. ": Not possible to connect to Camera No. ".. tostring(self.parameters.cameraNo))
     end
+    Script.notifyEvent('MultiRemoteCamera_OnCameraConnected', self.isConnected)
+    _G.logger:info(nameOfModule .. ': Connection to camera = ' .. tostring(self.isConnected))
   else
     local instanceAmount = CSK_MultiHTTPClient.getInstancesAmount()
     if instanceAmount >= self.parameters.httpClientInstance then
@@ -250,10 +258,7 @@ function multiRemoteCamera:connectCamera()
     end
   end
 
-  Script.notifyEvent('MultiRemoteCamera_OnCameraConnected', self.isConnected)
-  _G.logger:info(nameOfModule .. ': Connection to camera = ' .. tostring(self.isConnected))
   Script.notifyEvent("MultiRemoteCamera_OnScanCamera", false)
-
   CSK_MultiRemoteCamera.pageCalled()
 end
 

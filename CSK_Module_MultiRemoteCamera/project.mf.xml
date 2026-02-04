@@ -52,6 +52,11 @@ There is also the possibility to edit GigE Vision camera parameters (check also 
                 <item desc="JPG" name="jpg">jpg</item>
                 <item desc="PNG" name="png">png</item>
             </enum>
+            <enum name="ImageMode" trait="released">
+                <desc>Mode of image.</desc>
+                <item desc="Image" name="IMAGE">IMAGE</item>
+                <item desc="Use this mode if no image processing APIs are available on device but to forward binary image data from SEC camera." name="BINARY">BINARY</item>
+            </enum>
             <serves>
                 <event name="OnNewGain">
                     <desc>Notify gain of currently selected camera instance.</desc>
@@ -371,6 +376,23 @@ INFO: Other modules can check via "Script.isServedAsEvent" if event of sepecific
                     <desc>Notfiy interface of HTTP client to use for SEC connection.</desc>
                     <param desc="Interface" multiplicity="1" name="interface" type="string"/>
                 </event>
+                <event name="OnNewRawImageCameraNUM">
+                    <trait>released</trait>
+                    <desc>Example of dynamically created event to transfer incoming raw images of SEC cameras. +
+This event is only used if the internal image processing for these raw images is inactive (see 'setSEC100InternalImageProcessing'). +
+NUM will be replaced by the number of instance (e.g. "OnNewRawImageCamera1"). +
+INFO: Other modules can check via "Script.isServedAsEvent" if event of sepecific instance exists.</desc>
+                    <param desc="Image as binary string" multiplicity="1" name="image" type="binary"/>
+                    <param desc="Timestamp is created directly after module received new image." multiplicity="?" name="timestamp" type="int"/>
+                </event>
+                <event name="OnNewStatusSECSnapshotDelay">
+                    <desc>Notify time to wait after SEC snapshot to download the image.</desc>
+                    <param desc="Time in ms." multiplicity="1" name="delay" type="int"/>
+                </event>
+                <event name="OnNewStatusSECInternalImageProcessing">
+                    <desc>Notify status if SEC raw images should be converted for internal image processing (TRUE) or if only raw images will be forwarrded without conversion to reduce processing time (FALSE).</desc>
+                    <param desc="Status" multiplicity="1" name="status" type="bool"/>
+                </event>
                 <function name="pageCalled">
                     <desc>Function to register "OnResume" of the module UI (only as helper function).</desc>
                     <return desc="Empty string (only needed to simplify binding)." multiplicity="1" name="emptyString" type="string"/>
@@ -680,6 +702,14 @@ According to the selected model it will use some predefined GigE Vision paramete
                     <desc>Function to set interface of HTTP client to use for SEC100 connection.</desc>
                     <param desc="Interface" multiplicity="1" name="interface" type="string"/>
                 </function>
+                <function name="setSEC100SnapshotDelay">
+                    <desc>Function to set delay to wait after SEC trigger to download the latest snapshot from the SEC.</desc>
+                    <param desc="Time in ms." multiplicity="1" name="delay" type="int"/>
+                </function>
+                <function name="setSEC100InternalImageProcessing">
+                    <desc>Function to set status if received raw images of SEC camera should be converted for internal image processing. Set to FALSE  to reduce processing time if raw images should only be forwarded.</desc>
+                    <param desc="Status" multiplicity="1" name="status" type="bool"/>
+                </function>
             </serves>
         </crown>
         <crown name="MultiRemoteCamera_FC">
@@ -694,12 +724,13 @@ According to the selected model it will use some predefined GigE Vision paramete
                         <include>data-flow</include>
                         <desc>Provide image acquired by camera.</desc>
                         <param desc="Handle to internally used FlowConfig instance." multiplicity="1" name="handle" type="handle"/>
-                        <param desc="'CSK_MultiRemoteCamera.OnNewImageCamera[InstanceNUM]'&#10;&#10;Parameter:&#10;1: Image (IMAGE)&#10;2: Timestampe (INT)" multiplicity="1" name="OnNewImage" type="string"/>
+                        <param desc="'CSK_MultiRemoteCamera.OnNewImageCamera[InstanceNUM]' or 'CSK_MultiRemoteCamera.OnNewRawImageCamera[InstanceNUM]' or &#10;&#10;Parameter:&#10;1: Image (IMAGE or BINARY STRING)&#10;2: Timestampe (INT)" multiplicity="1" name="OnNewImage" type="string"/>
                     </event>
                     <function name="create">
                         <trait>released</trait>
                         <desc>Internally used CSK_FlowConfig create function.</desc>
                         <param constraint="1-99" desc="Numeric identifier of camera instance." multiplicity="1" name="Instance" type="int"/>
+                        <param desc="Image mode.&#10;&#10;'IMAGE' = Default mode&#10;&#10;'BINARY' = Use this mode if no image processing APIs are available on device but to forward binary image data from SEC camera." multiplicity="1" name="Mode" ref="CSK_MultiRemoteCamera.ImageMode" type="enum"/>
                         <return desc="Handle to internally used FlowConfig instance." multiplicity="1" name="handle" type="handle"/>
                     </function>
                     <function name="register">
@@ -714,7 +745,7 @@ According to the selected model it will use some predefined GigE Vision paramete
             </crown>
         </crown>
         <meta key="author">SICK AG</meta>
-        <meta key="version">6.2.0</meta>
+        <meta key="version">6.3.0</meta>
         <meta key="priority">low</meta>
         <meta key="copy-protected">false</meta>
         <meta key="read-protected">false</meta>

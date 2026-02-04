@@ -38,10 +38,18 @@ local function getParameters()
   multiRemoteCameraParameters.processingFile = 'CSK_MultiRemoteCamera_ImageProcessing' -- Script to use for processing in thread
   multiRemoteCameraParameters.monitorCamera = false -- Opt. monitor camera status in "CameraOverview" UI
   multiRemoteCameraParameters.customGigEVisionConfig = {} -- Custom GigEVision setting, content are 3 tables ".parameter", ".type", ".value"
-  multiRemoteCameraParameters.cameraModel = "PicoMidiCam2" -- 'a2A1920-51gcBAS', 'CustomConfig', 'SEC100'
+  if _G.availableAPIs.GigEVision then
+    multiRemoteCameraParameters.cameraModel = "PicoMidiCam2" -- 'a2A1920-51gcBAS', 'CustomConfig', 'SEC100'
+  elseif _G.availableAPIs.I2D then
+    multiRemoteCameraParameters.cameraModel = "PicoMidiCam" -- Version 1
+  elseif _G.availableAPIs.SEC100 then
+    multiRemoteCameraParameters.cameraModel = "SEC100" -- 'a2A1920-51gcBAS', 'CustomConfig', 'SEC100'
+  end
   multiRemoteCameraParameters.secUser = 'Service' -- User to login to SEC camera
   multiRemoteCameraParameters.secUserPassword = '' -- User password to login to SEC camera
   multiRemoteCameraParameters.secMode = 'Snapshot' -- Mode to run SEC camera
+  multiRemoteCameraParameters.secInternalImageProcessing = true -- Convert raw images for internal image processing (TRUE) or only forward raw images (FALSE)
+  multiRemoteCameraParameters.secSnapshotDelay = 400 -- Time to wait before downloading latest snapshot
 
   -- Image processing parameters
   multiRemoteCameraParameters.processingMode = "BOTH" -- 'SCRIPT', 'APP', 'BOTH' --> see "setProcessingMode"

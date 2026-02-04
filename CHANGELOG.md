@@ -1,6 +1,18 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## Release 6.3.0
+
+### New features
+- Set delay to wait before trying to download latest image from SEC camera (see setSEC100SnapshotDelay)
+- Set status if images of SEC camera should be processed internally. Deactivate to save processing time (see setSEC100InternalImageProcessing)
+- Provide image binary string via event (see OnNewRawImageCameraNUM)
+
+### Improvements
+- Better handling of SEC images (CSK_Module_MultiHTTPClient version 2.3.0 needed)
+- Provide SEC features on devices without image processing
+- Improved connection check to SEC camera
+
 ## Release 6.2.0
 
 ### New features

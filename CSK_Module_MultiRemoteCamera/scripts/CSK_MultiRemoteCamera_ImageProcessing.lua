@@ -42,16 +42,34 @@ imageProcessingParams.secUser = scriptParams:get('secUser')
 imageProcessingParams.secUserPassword = scriptParams:get('secUserPassword')
 imageProcessingParams.secMode = scriptParams:get('secMode')
 imageProcessingParams.secWebSocketClientInstance = scriptParams:get('secWebSocketClientInstance')
+imageProcessingParams.secSnapshotDelay = scriptParams:get('secSnapshotDelay')
+imageProcessingParams.secInternalImageProcessing = scriptParams:get('secInternalImageProcessing')
 
 imageProcessingParams.activeInUI = false -- Is this instance currently selected in UI
 imageProcessingParams.viewerActive = false -- Should the image be shown in viewer
 
-local viewer = View.create(viewerId) -- Viewer to show image
+local viewer
+if availableAPIs.imageProvider then
+  viewer = View.create(viewerId) -- Viewer to show image
+end
 local imageQueue = Script.Queue.create() -- Queue to stop processing if increasing too much
-local jpeg = Image.Format.JPEG.create() -- Image decoder for SEC100 images
+local jpeg
+
+if availableAPIs.imageProcessing then
+  jpeg = Image.Format.JPEG.create() -- Image decoder for SEC100 images
+end
+
+local latestChallengeResponse = nil -- Latest challenge response of SEC camera
+
+local tmrLatestSnapshot = Timer.create()
+tmrLatestSnapshot:setExpirationTime(imageProcessingParams.secSnapshotDelay)
+tmrLatestSnapshot:setPeriodic(false)
 
 -- Event to forward image to other modules
 Script.serveEvent("CSK_MultiRemoteCamera.OnNewImageCamera" .. cameraNumberString, "MultiRemoteCamera_OnNewImageCamera" .. cameraNumberString, 'object:1:Image, int:?')
+
+-- Event to forward RAW image (binary string) to other modules
+Script.serveEvent("CSK_MultiRemoteCamera.OnNewRawImageCamera" .. cameraNumberString, "MultiRemoteCamera_OnNewRawImageCamera" .. cameraNumberString, 'string:1, int:?')
 
 -- Event to forward updated values e.g. through Controller to UI
 Script.serveEvent("CSK_MultiRemoteCamera.OnNewValueToForward" .. cameraNumberString, "MultiRemoteCamera_OnNewValueToForward" .. cameraNumberString, 'string:1, auto:1')
@@ -153,8 +171,10 @@ local function handleOnNewImageProcessing(image, sensorData)
     if imageProcessingParams.mode == 'SCRIPT' or imageProcessingParams.mode == 'BOTH' then
       -- OPTION A --> Using image locally in this script
       if imageProcessingParams.activeInUI == true and imageProcessingParams.viewerActive == true then
-        viewer:addImage(resImage)
-        viewer:present()
+        if availableAPIs.imageProvider then
+          viewer:addImage(resImage)
+          viewer:present()
+        end
       end
     end
 
@@ -228,56 +248,92 @@ local function computeResponseHash(challenge, action, user, password)
   return buildDigest({ha1, nonce, ha2})
 end
 
+
+-- Function to get new SEC challenge
+local function getSECChallenge()
+  local _, _, challengeResponse = Script.callFunction('CSK_MultiHTTPClient.sendRequest' .. tostring(imageProcessingParams.httpClientInstance), 'POST', 'http://' .. secIP .. '/api/getChallenge', 80, nil, '{"data":{"user": "' .. imageProcessingParams.secUser .. '"}}', 'application/json', false)
+  latestChallengeResponse = json.decode(challengeResponse:getContent())
+end
+
+-- Function to create request body for SEC
+local function getRequestBody(command, data)
+  local responseHash = computeResponseHash(latestChallengeResponse.challenge, command, imageProcessingParams.secUser, imageProcessingParams.secUserPassword)
+  local requestBody
+
+  if data then
+    requestBody = '{"header":{"user":"' .. imageProcessingParams.secUser .. '","response":"' .. responseHash .. '","realm":"SICK Sensor","opaque":"' .. latestChallengeResponse.challenge.opaque .. '","nonce":"' .. latestChallengeResponse.challenge.nonce .. '"},' .. data .. '}'
+  else
+    requestBody = '{"header":{"user":"' .. imageProcessingParams.secUser .. '","response":"' .. responseHash .. '","realm":"SICK Sensor","opaque":"' .. latestChallengeResponse.challenge.opaque .. '","nonce":"' .. latestChallengeResponse.challenge.nonce .. '"}}'
+  end
+  return requestBody
+end
+
 --- Function to trigger SEC camera
 ---@param command string Command to send to SEC camera
 ---@param data string Data for command
 ---@return bool suc Success of trigger
 local function triggerSEC(command, data)
 
-  local _, challengeResponse = Script.callFunction('CSK_MultiHTTPClient.sendRequest' .. tostring(imageProcessingParams.httpClientInstance), 'POST', 'http://' .. secIP .. '/api/getChallenge', 80, nil, '{"data":{"user": "' .. imageProcessingParams.secUser .. '"}}', 'application/json')
-  local challengeResponseContent = json.decode(challengeResponse)
-  if challengeResponseContent.Response then
+  if latestChallengeResponse == nil then
+    getSECChallenge()
+  end
 
-    local response = json.decode(challengeResponseContent.Response)
+  if latestChallengeResponse.challenge then
+    local requestBody = getRequestBody(command, data)
+    local requestResponse
 
-    if response.challenge then
-      local responseHash = computeResponseHash(response.challenge, command, imageProcessingParams.secUser, imageProcessingParams.secUserPassword)
-      local requestBody
+    if command == 'latestSnapshot' then
+      _, _, requestResponse = Script.callFunction('CSK_MultiHTTPClient.sendRequest' .. tostring(imageProcessingParams.httpClientInstance), 'POST', 'http://' .. secIP .. '/file/download/' .. command, 80, nil, requestBody, 'image/jpeg', false)
 
-      if data then
-        requestBody = '{"header":{"user":"' .. imageProcessingParams.secUser .. '","response":"' .. responseHash .. '","realm":"SICK Sensor","opaque":"' .. response.challenge.opaque .. '","nonce":"' .. response.challenge.nonce .. '"},' .. data .. '}'
-      else
-        requestBody = '{"header":{"user":"' .. imageProcessingParams.secUser .. '","response":"' .. responseHash .. '","realm":"SICK Sensor","opaque":"' .. response.challenge.opaque .. '","nonce":"' .. response.challenge.nonce .. '"}}'
+      if requestResponse:getStatusCode() ~= 200 then
+        _G.logger:info(nameOfModule .. ": Did not work. Try again with new challenge.")
+        getSECChallenge()
+        requestBody = getRequestBody(command, data)
+        _, _, requestResponse = Script.callFunction('CSK_MultiHTTPClient.sendRequest' .. tostring(imageProcessingParams.httpClientInstance), 'POST', 'http://' .. secIP .. '/file/download/' .. command, 80, nil, requestBody, 'image/jpeg', false)
       end
 
-      local requestResponse
-      local responseData
-      if command == 'latestSnapshot' then
-        _, requestResponse = Script.callFunction('CSK_MultiHTTPClient.sendRequest' .. tostring(imageProcessingParams.httpClientInstance), 'POST', 'http://' .. secIP .. '/file/download/' .. command, 80, nil, requestBody, 'image/jpeg')
-        responseData = json.decode(requestResponse)
-        if responseData.StatusCode == 200 then
-          local img = jpeg:decode(responseData.Response)
+      if requestResponse:getStatusCode() == 200 then
+        local imageContent = requestResponse:getContent()
+        if availableAPIs.imageProcessing and imageProcessingParams.secInternalImageProcessing then
+          local img = jpeg:decode(imageContent)
           handleOnNewImageProcessing(img)
-          return true
         else
-          _G.logger:warning(nameOfModule .. ": Request did not work.")
-          return false
+          Script.notifyEvent('MultiRemoteCamera_OnNewRawImageCamera' .. cameraNumberString, imageContent, DateTime.getTimestamp())
         end
+        return true
       else
-        _, requestResponse = Script.callFunction('CSK_MultiHTTPClient.sendRequest' .. tostring(imageProcessingParams.httpClientInstance), 'POST', 'http://' .. secIP .. '/api/' .. command, 80, nil, requestBody, 'application/json')
-        responseData = json.decode(requestResponse)
-        if responseData.StatusCode ~= 200 then
-          _G.logger:warning(nameOfModule .. ": Request did not work.")
-          return false
-        else
-          return true
-        end
+        _G.logger:warning(nameOfModule .. ": Request did not work.")
+        return false
       end
     else
-      _G.logger:warning(nameOfModule .. ": Request challenge did not work.")
-      return false
+      _, _, requestResponse = Script.callFunction('CSK_MultiHTTPClient.sendRequest' .. tostring(imageProcessingParams.httpClientInstance), 'POST', 'http://' .. secIP .. '/api/' .. command, 80, nil, requestBody, 'application/json', false)
+
+      local wrongPasword = nil
+      if command == 'SnapshotMode' then
+        wrongPasword = string.find(requestResponse:getContent(), 'Access Denied')
+      end
+
+      if wrongPasword ~= nil then
+        _G.logger:warning(nameOfModule .. ": No connection to SEC (due to wrong password?).")
+        latestChallengeResponse = nil
+        return false
+      else
+        if requestResponse:getStatusCode() ~= 200 then
+          _G.logger:info(nameOfModule .. ": Did not work. Try again with new challenge.")
+          getSECChallenge()
+          _, _, requestResponse = Script.callFunction('CSK_MultiHTTPClient.sendRequest' .. tostring(imageProcessingParams.httpClientInstance), 'POST', 'http://' .. secIP .. '/api/' .. command, 80, nil, requestBody, 'application/json', false)
+        end
+
+        if requestResponse:getStatusCode() ~= 200 then
+          _G.logger:warning(nameOfModule .. ": Request did not work.")
+          return false
+        else
+          return true
+        end
+      end
     end
   else
+    _G.logger:warning(nameOfModule .. ": Request challenge did not work.")
     return false
   end
 end
@@ -287,8 +343,12 @@ end
 ---@param format enum Message format.
 local function unpackBinaryImage(data, format)
   if format == 'BINARY' then
-    local img = jpeg:decode(data)
-    handleOnNewImageProcessing(img)
+    if availableAPIs.imageProcessing and imageProcessingParams.secInternalImageProcessing then
+      local img = jpeg:decode(data)
+      handleOnNewImageProcessing(img)
+    elseif not imageProcessingParams.secInternalImageProcessing then
+      Script.notifyEvent('MultiRemoteCamera_OnNewRawImageCamera' .. cameraNumberString, data, DateTime.getTimestamp())
+    end
   end
 end
 queue:setFunction(unpackBinaryImage)
@@ -296,6 +356,12 @@ queue:setFunction(unpackBinaryImage)
 --#############################################
 --################ SEC100 END #################
 --#############################################
+
+-- Function to get latest snapshot after timer expired
+local function getLatestSnapshot()
+  triggerSEC('latestSnapshot')
+end
+Timer.register(tmrLatestSnapshot, 'OnExpired', getLatestSnapshot)
 
 --- Function to handle updates of processing parameters from Controller
 ---@param cameraNo int Number of camera instance to update
@@ -305,8 +371,10 @@ local function handleOnNewImageProcessingParameter(cameraNo, parameter, value)
   if parameter == 'viewerActive' then
     imageProcessingParams[parameter] = value
     if value == false then
-      viewer:clear()
-      viewer:present()
+      if availableAPIs.imageProvider then
+        viewer:clear()
+        viewer:present()
+      end
     end
   elseif cameraNo == cameraNumber then
     if parameter == 'saveLastImage' then
@@ -340,18 +408,22 @@ local function handleOnNewImageProcessingParameter(cameraNo, parameter, value)
       end
     elseif parameter == 'SEC100_Trigger' then
       triggerSEC('SnapshotTriggerSnapshot')
-      Script.sleep(200)
-      triggerSEC('latestSnapshot')
+      tmrLatestSnapshot:start()
     else
       if not parameter == 'activeInUI' then
         _G.logger:fine(nameOfModule .. ": Update parameter '" .. parameter .. "' of cameraNo." .. tostring(cameraNo) .. " to value = " .. tostring(value))
       end
       imageProcessingParams[parameter] = value
+      if parameter == 'secSnapshotDelay' then
+        tmrLatestSnapshot:setExpirationTime(value)
+      end
     end
   elseif parameter == 'activeInUI' then
     imageProcessingParams[parameter] = false
-    viewer:clear()
-    viewer:present()
+    if availableAPIs.imageProvider then
+      viewer:clear()
+      viewer:present()
+    end
   end
 end
 Script.register("CSK_MultiRemoteCamera.OnNewImageProcessingParameter", handleOnNewImageProcessingParameter)

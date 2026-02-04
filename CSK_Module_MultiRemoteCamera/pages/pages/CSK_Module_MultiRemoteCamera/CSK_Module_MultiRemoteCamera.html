@@ -291,10 +291,10 @@
                                         </layout-row>
                                         <layout-row id="RowLayout54">
                                             <layout-column id="ColumnLayout68" style="align-items: stretch">
-												<sick-viewer2d id="Viewer2D1"
-													class="myViewer_CSK_Module_MultiRemoteCamera"
-													viewer-id="multiRemoteCameraViewer1" protocol="auto">
-												</sick-viewer2d>
+                                                <sick-viewer2d id="Viewer2D1"
+                                                    class="myViewer_CSK_Module_MultiRemoteCamera"
+                                                    viewer-id="multiRemoteCameraViewer1" protocol="auto">
+                                                </sick-viewer2d>
                                                 <stacked-view id="SV_ViewerInfo">
                                                     <stacked-pane id="SP_ViewerInfoActive" value="APP">
                                                         <davinci-callout id="C_ViewerInfo" type="info">
@@ -1558,6 +1558,37 @@
                                                                                                         </davinci-drop-down>
                                                                                                     </layout-column>
                                                                                                 </layout-row>
+                                                                                                <layout-row
+                                                                                                    id="RowLayout91"
+                                                                                                    style="align-items: center">
+                                                                                                    <layout-column
+                                                                                                        id="ColumnLayout100"
+                                                                                                        style="align-items: stretch">
+                                                                                                        <davinci-value-display
+                                                                                                            id="VD_SECInternalImageProcessing"
+                                                                                                            value="Internal image processing:"
+                                                                                                            title="Set to FALSE to only forward received SEC raw images without internal image processing (will be send via 'OnNewRawImageCamera'-event). This reduces the imgae proccesing time.">
+                                                                                                        </davinci-value-display>
+                                                                                                    </layout-column>
+                                                                                                    <layout-column
+                                                                                                        id="ColumnLayout101"
+                                                                                                        style="align-items: flex-end">
+                                                                                                        <davinci-toggle-switch
+                                                                                                            id="TS_SECInternalImageProcessing">
+                                                                                                            <crown-binding
+                                                                                                                event="change"
+                                                                                                                name="CSK_MultiRemoteCamera/setSEC100InternalImageProcessing"
+                                                                                                                path="param/args/status"
+                                                                                                                auto-commit>
+                                                                                                            </crown-binding>
+                                                                                                            <crown-edpws-binding
+                                                                                                                property="checked"
+                                                                                                                name="CSK_MultiRemoteCamera/OnNewStatusSECInternalImageProcessing"
+                                                                                                                update-on-resume>
+                                                                                                            </crown-edpws-binding>
+                                                                                                        </davinci-toggle-switch>
+                                                                                                    </layout-column>
+                                                                                                </layout-row>
                                                                                                 <stacked-view
                                                                                                     id="SV_SECMode">
                                                                                                     <stacked-pane
@@ -1569,6 +1600,44 @@
                                                                                                             <layout-column
                                                                                                                 id="ColumnLayout92"
                                                                                                                 style="align-items: stretch">
+                                                                                                                <layout-row
+                                                                                                                    id="RowLayout82"
+                                                                                                                    style="align-items: center">
+                                                                                                                    <layout-column
+                                                                                                                        id="ColumnLayout88"
+                                                                                                                        style="align-items: stretch">
+                                                                                                                        <davinci-value-display
+                                                                                                                            id="VD_SnapshotDelay"
+                                                                                                                            value="Download delay:"
+                                                                                                                            title="Delay in ms to wait after snapshop to download latest image.">
+                                                                                                                        </davinci-value-display>
+                                                                                                                    </layout-column>
+                                                                                                                    <layout-column
+                                                                                                                        id="ColumnLayout89"
+                                                                                                                        style="align-items: stretch">
+                                                                                                                        <davinci-numeric-field
+                                                                                                                            id="NF_SnapshotDelay"
+                                                                                                                            type="outline"
+                                                                                                                            min="0"
+                                                                                                                            max="5000"
+                                                                                                                            ticks="1"
+                                                                                                                            group-separator=","
+                                                                                                                            decimal-separator="."
+                                                                                                                            format-pattern="0">
+                                                                                                                            <crown-edpws-binding
+                                                                                                                                property="value"
+                                                                                                                                name="CSK_MultiRemoteCamera/OnNewStatusSECSnapshotDelay"
+                                                                                                                                update-on-resume>
+                                                                                                                            </crown-edpws-binding>
+                                                                                                                            <crown-binding
+                                                                                                                                event="change"
+                                                                                                                                name="CSK_MultiRemoteCamera/setSEC100SnapshotDelay"
+                                                                                                                                path="param/args/delay"
+                                                                                                                                auto-commit>
+                                                                                                                            </crown-binding>
+                                                                                                                        </davinci-numeric-field>
+                                                                                                                    </layout-column>
+                                                                                                                </layout-row>
                                                                                                                 <layout-row
                                                                                                                     id="RowLayout313"
                                                                                                                     style="align-items: center">

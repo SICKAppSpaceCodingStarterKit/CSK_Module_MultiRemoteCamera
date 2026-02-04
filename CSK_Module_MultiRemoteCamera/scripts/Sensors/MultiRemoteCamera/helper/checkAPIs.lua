@@ -40,11 +40,17 @@ local function loadSpecificAPIs()
   Image = require 'API.Image'
   Image.Provider = {}
   Image.Provider.RemoteCamera = require 'API.Image.Provider.RemoteCamera'
+  View = require 'API.View'
+end
+
+local function loadEthernetSpecificAPIs()
   Ethernet = require 'API.Ethernet'
   Ethernet.Interface = require 'API.Ethernet.Interface'
+end
+
+-- Function to load flow specific API
+local function loadFlowSpecific()
   Flow = require 'API.Flow'
-  Image = require 'API.Image'
-  View = require 'API.View'
 end
 
 -- Function to load specific I2D APIs
@@ -65,9 +71,6 @@ local function loadSEC100SpecificAPIs()
 
   Hash = {}
   Hash.SHA256 = require 'API.Hash.SHA256'
-
-  Image.Format = {}
-  Image.Format.JPEG = require 'API.Image.Format.JPEG'
 
   -- Check if related CSK modules are available to be used
   local appList = Engine.listApps()
@@ -91,10 +94,20 @@ local function loadSEC100StreamSpecificAPIs()
   end
 end
 
+local function loadImageProcessingSpecificAPIs()
+  Image.Format = {}
+  Image.Format.JPEG = require 'API.Image.Format.JPEG'
+end
+
 availableAPIs.default = xpcall(loadAPIs, debug.traceback) -- TRUE if all default APIs were loaded correctly
 availableAPIs.imageProvider = xpcall(loadSpecificAPIs, debug.traceback) -- TRUE if all specific APIs were loaded correctly
 availableAPIs.I2D = xpcall(loadI2DSpecificAPIs, debug.traceback) -- TRUE if all I2D specific APIs were loaded correctly
 availableAPIs.GigEVision = xpcall(loadGigEVisionSpecificAPIs, debug.traceback) -- TRUE if all GigE Vision specific APIs were loaded correctly
+availableAPIs.imageProcessing = xpcall(loadImageProcessingSpecificAPIs, debug.traceback) -- TRUE if all SEC100 specific APIs were loaded correctly
+
+availableAPIs.ethernet = xpcall(loadEthernetSpecificAPIs, debug.traceback) -- TRUE if all default APIs were loaded correctly
+availableAPIs.flow = xpcall(loadFlowSpecific, debug.traceback) -- TRUE if all default APIs were loaded correctly
+
 availableAPIs.SEC100 = xpcall(loadSEC100SpecificAPIs, debug.traceback) -- TRUE if all SEC100 specific APIs were loaded correctly
 availableAPIs.SEC100Stream = xpcall(loadSEC100StreamSpecificAPIs, debug.traceback) -- TRUE if all SEC100 specific APIs were loaded correctly
 

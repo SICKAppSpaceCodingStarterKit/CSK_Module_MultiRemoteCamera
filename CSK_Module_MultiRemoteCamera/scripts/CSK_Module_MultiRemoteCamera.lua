@@ -66,9 +66,11 @@ local multiRemoteCameras_Instances = {} -- Handle all instances
 local multiRemoteCameraController = require('Sensors/MultiRemoteCamera/MultiRemoteCamera_Controller')
 
 -- Check if specific APIs are available on device
-if _G.availableAPIs.default and _G.availableAPIs.imageProvider then
-  _G.logger:info("I2D Support = " .. tostring(_G.availableAPIs.I2D) .. ", GigEVision support = " .. tostring(_G.availableAPIs.GigEVision))
-  require('Sensors/MultiRemoteCamera/FlowConfig/MultiRemoteCamera_FlowConfig')
+if _G.availableAPIs.default then
+  _G.logger:info("I2D Support = " .. tostring(_G.availableAPIs.I2D) .. ", GigEVision support = " .. tostring(_G.availableAPIs.GigEVision)  .. ", SEC support = " .. tostring(_G.availableAPIs.SEC100))
+  if _G.availableAPIs.flow then
+    require('Sensors/MultiRemoteCamera/FlowConfig/MultiRemoteCamera_FlowConfig')
+  end
   table.insert(multiRemoteCameras_Instances, multiRemoteCamera_Model.create(1)) -- create(cameraNo:int)
   multiRemoteCameraController.setMultiRemoteCamera_Instances_Handle(multiRemoteCameras_Instances) -- share handle of instances
 else

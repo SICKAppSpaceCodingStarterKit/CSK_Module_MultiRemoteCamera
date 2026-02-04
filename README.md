@@ -17,7 +17,7 @@ Following CSK modules are necessary if you want to run it with SEC cameras:
 
 |Module|Version|Remark
 |--|--|--|
-|CSK_Module_MultiHTTPClient|[V2.2.0](https://github.com/SICKAppSpaceCodingStarterKit/CSK_Module_MultiHTTPClient/releases/tag/v2.2.0)|
+|CSK_Module_MultiHTTPClient|[V2.3.0](https://github.com/SICKAppSpaceCodingStarterKit/CSK_Module_MultiHTTPClient/releases/tag/v2.3.0)|
 |CSK_Module_MultiWebSocketClient|[V1.0.0](https://github.com/SICKAppSpaceCodingStarterKit/CSK_Module_MultiWebSocketClient/releases/tag/v1.0.0)|
 
 ## Information
@@ -26,6 +26,7 @@ Tested on
 
 |Device|Firmware|Module version|
 |--|--|--|
+|SIM800|V1.2.0|V6.3.0|
 |SIM2x00|V1.8.0|V6.1.1|
 |SIM2x00|V1.8.0|V6.1.0|
 |SIM1012|V2.4.2|V6.1.0|

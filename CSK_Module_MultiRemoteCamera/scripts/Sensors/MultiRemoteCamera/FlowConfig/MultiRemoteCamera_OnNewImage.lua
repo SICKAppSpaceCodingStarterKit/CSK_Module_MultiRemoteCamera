@@ -32,6 +32,7 @@ local function register(handle, _ , callback)
   Container.add(handle, "CB_Function", callback)
 
   local instance = Container.get(handle, 'Instance')
+  local imageMode = Container.get(handle, 'ImageMode')
 
   -- Check if amount of instances is valid
   -- if not: add multiple additional instances
@@ -46,7 +47,11 @@ local function register(handle, _ , callback)
 
   local function localCallback()
     if callback ~= nil then
-      Script.callFunction(callback, 'CSK_MultiRemoteCamera.OnNewImageCamera' .. tostring(instance))
+      if imageMode == 'BINARY' then
+        Script.callFunction(callback, 'CSK_MultiRemoteCamera.OnNewRawImageCamera' .. tostring(instance))
+      else
+        Script.callFunction(callback, 'CSK_MultiRemoteCamera.OnNewImageCamera' .. tostring(instance))
+      end
     else
       _G.logger:warning(nameOfModule .. ": " .. BLOCK_NAMESPACE .. ".CB_Function missing!")
     end
@@ -62,7 +67,7 @@ Script.serveFunction(BLOCK_NAMESPACE ..".register", register)
 --*************************************************************
 --*************************************************************
 
-local function create(instance)
+local function create(instance, imageMode)
 
   -- Check if same instance is already configured
   if instance < 1 or nil ~= instanceTable[instance] then
@@ -73,6 +78,7 @@ local function create(instance)
     local handle = Container.create()
     instanceTable[instance] = instance
     Container.add(handle, 'Instance', instance)
+    Container.add(handle, 'ImageMode', imageMode or 'Image')
     Container.add(handle, "CB_Function", "")
     return handle
   end
